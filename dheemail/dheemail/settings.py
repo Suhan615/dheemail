@@ -1,6 +1,11 @@
+import os
+import shutil
+import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
+RUNTIME_DIR = Path(tempfile.gettempdir())
 
 SECRET_KEY = "django-insecure-change-this-key-before-production"
 DEBUG = True
@@ -48,10 +53,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "dheemail.wsgi.application"
 
+if IS_VERCEL:
+    SQLITE_DB_PATH = RUNTIME_DIR / "db.sqlite3"
+    bundled_db_path = BASE_DIR / "db.sqlite3"
+    if not SQLITE_DB_PATH.exists() and bundled_db_path.exists():
+        shutil.copyfile(bundled_db_path, SQLITE_DB_PATH)
+else:
+    SQLITE_DB_PATH = BASE_DIR / "db.sqlite3"
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": SQLITE_DB_PATH,
     }
 }
 
@@ -70,8 +83,17 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+WHITENOISE_USE_FINDERS = True
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = RUNTIME_DIR / "media" if IS_VERCEL else BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "mailapp.User"
