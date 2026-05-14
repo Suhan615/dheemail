@@ -1,2 +1,5 @@
+# Required for Vercel deployment
+daphne
+whitenoise
 Django>=5.0,<6.0
 Pillow>=10.0
